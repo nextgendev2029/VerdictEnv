@@ -1,0 +1,62 @@
+# OpenEnv manifest for VerdictEnv (court / jury turn-taking simulation)
+name: verdict-env
+version: "0.1.0"
+openenv_version: "0.2.0"
+description: >
+  Minimal courtroom environment: present evidence, object, or pass; jury
+  sentiment drives rewards for RL and evaluation (TRL / Unsloth compatible client).
+
+# Pydantic model entry points
+observation_type: verdict_env.models.VerdictObservation
+action_type: verdict_env.models.VerdictAction
+# Scalar reward is carried on `VerdictObservation.reward` (OpenEnv Observation).
+
+# Default episode bounds
+max_episode_steps: 32
+
+tasks:
+  - id: easy
+    name: "Easy: tight record"
+    description: "3 evidence items; short episodes."
+    difficulty: easy
+    max_steps: 12
+    grader:
+      module: verdict_env.tasks
+      function: grade_easy
+
+  - id: medium
+    name: "Medium: mixed docket"
+    description: "5 evidence items; standard difficulty."
+    difficulty: medium
+    max_steps: 20
+    grader:
+      module: verdict_env.tasks
+      function: grade_medium
+
+  - id: hard
+    name: "Hard: full trial"
+    description: "8 evidence items; longer reasoning horizon."
+    difficulty: hard
+    max_steps: 32
+    grader:
+      module: verdict_env.tasks
+      function: grade_hard
+
+grader:
+  module: verdict_env.tasks
+  function: grade_medium
+
+scoring:
+  reward_range: [-1.0, 1.0]
+  success_threshold: 0.15
+  score_formula: "cumulative reward over episode; higher is better case posture"
+
+agent:
+  baseline: verdict_env.inference:main
+  type: script
+  notes: "Random valid-action baseline; replace with a policy / LLM as you iterate."
+
+constraints:
+  max_runtime_seconds: 300
+  max_memory_gb: 4
+  max_vcpu: 2

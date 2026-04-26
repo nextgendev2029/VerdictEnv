@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "verdict-env"
+version = "0.1.0"
+description = "VerdictEnv — OpenEnv-style courtroom / jury environment for agentic RL"
+requires-python = ">=3.10"
+dependencies = [
+  # openenv-core pulls optional UI stacks; a concrete gradio band avoids huge resolver backtracking.
+  "openenv-core[core]>=0.2.2,<0.3",
+  "gradio>=4.44.0",
+  "fastapi>=0.115.0",
+  "pydantic>=2.0.0",
+  "uvicorn[standard]>=0.24.0",
+  "websockets>=12.0",
+  "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "ruff>=0.4.0"]
+
+[project.scripts]
+verdict-server = "verdict_env.server.app:serve_api"
+verdict-infer = "verdict_env.inference:main"
+
+[tool.setuptools]
+include-package-data = true
+package-dir = { "verdict_env" = ".", "verdict_env.server" = "server" }
+packages = ["verdict_env", "verdict_env.server"]
+
+[tool.setuptools.package-data]
+verdict_env = ["openenv.yaml"]
