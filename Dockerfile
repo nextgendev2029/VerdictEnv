@@ -11,17 +11,27 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PORT=7860
+    PORT=7860 \
+    PYTHONPATH=/app
 
 # ── Layer 1: install dependencies (cached unless requirements.txt changes) ──
 COPY server/requirements.txt server/requirements.txt
 RUN pip install --no-cache-dir -r server/requirements.txt
 
-# ── Layer 2: copy source and install package in editable mode ──
-# Editable install creates a .pth finder that respects the package-dir mapping
-# in pyproject.toml, so `verdict_env` resolves correctly from /app.
+# ── Layer 2: copy source ──
 COPY . .
-RUN pip install --no-cache-dir --no-deps -e .
+
+# ── Layer 3: create a proper verdict_env/ package Python can actually find ──
+# The source layout has package files directly at the repo root (not inside a
+# verdict_env/ subdirectory), which confuses pip's wheel/editable installers.
+# The fix: build the expected directory layout explicitly, no pip install needed.
+RUN mkdir -p verdict_env/server \
+    && cp __init__.py models.py tasks.py inference.py client.py verdict_env/ \
+    && cp -r server/. verdict_env/server/
+
+# With PYTHONPATH=/app, Python resolves:
+#   verdict_env            → /app/verdict_env/
+#   verdict_env.server.app → /app/verdict_env/server/app.py  ✓
 
 EXPOSE 7860
 
