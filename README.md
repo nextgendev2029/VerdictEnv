@@ -3,9 +3,7 @@ title: VerdictEnv — AI Courtroom Simulator
 emoji: ⚖️
 colorFrom: blue
 colorTo: indigo
-sdk: gradio
-sdk_version: "6.13.0"
-app_file: server/app.py
+sdk: docker
 app_port: 7860
 pinned: false
 license: mit
