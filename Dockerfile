@@ -17,9 +17,11 @@ ENV PYTHONUNBUFFERED=1 \
 COPY server/requirements.txt server/requirements.txt
 RUN pip install --no-cache-dir -r server/requirements.txt
 
-# ── Layer 2: copy source and install the package (no-deps, already above) ──
+# ── Layer 2: copy source and install package in editable mode ──
+# Editable install creates a .pth finder that respects the package-dir mapping
+# in pyproject.toml, so `verdict_env` resolves correctly from /app.
 COPY . .
-RUN pip install --no-cache-dir --no-deps .
+RUN pip install --no-cache-dir --no-deps -e .
 
 EXPOSE 7860
 
