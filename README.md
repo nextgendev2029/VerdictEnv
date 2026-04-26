@@ -12,7 +12,7 @@ license: mit
 # ⚖️ VerdictEnv — AI Courtroom RL Environment
 
 [![Open in Spaces](https://img.shields.io/badge/🤗-Open%20in%20Spaces-blue)](https://huggingface.co/spaces/tuhindev2029/VerdictEnv)
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tuhindev2029/VerdictEnv/blob/main/VerdictEnv_Colab.ipynb)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nextgendev2029/VerdictEnv/blob/main/VerdictEnv_Colab.ipynb)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenEnv](https://img.shields.io/badge/OpenEnv-compliant-green)](openenv.yaml)
 
@@ -156,7 +156,7 @@ The Q-table reveals clear learned behavior — not random improvement:
 ### Run locally
 
 ```bash
-git clone https://github.com/tuhindev2029/VerdictEnv.git
+git clone https://github.com/nextgendev2029/VerdictEnv.git
 cd VerdictEnv
 pip install -e .
 ```
@@ -221,7 +221,7 @@ verdict_env/
 
 The full training pipeline runs end-to-end in Google Colab — no setup required:
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tuhindev2029/VerdictEnv/blob/main/VerdictEnv_Colab.ipynb)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nextgendev2029/VerdictEnv/blob/main/VerdictEnv_Colab.ipynb)
 
 The notebook covers:
 1. Install and import
@@ -240,8 +240,8 @@ The notebook covers:
 | Resource | Link |
 |----------|------|
 | 🚀 HF Space (live demo) | [tuhindev2029/VerdictEnv](https://huggingface.co/spaces/tuhindev2029/VerdictEnv) |
-| 📓 Colab Notebook | [VerdictEnv_Colab.ipynb](https://colab.research.google.com/github/tuhindev2029/VerdictEnv/blob/main/VerdictEnv_Colab.ipynb) |
-| 📝 Blog / Writeup | [BLOG.md](BLOG.md) |
+| 📓 Colab Notebook | [VerdictEnv_Colab.ipynb](https://colab.research.google.com/github/nextgendev2029/VerdictEnv/blob/main/VerdictEnv_Colab.ipynb) |
+| 📝 Blog / Writeup | [BLOG.md](https://huggingface.co/spaces/tuhindev2029/VerdictEnv/blob/main/BLOG.md) |
 | ⚙️ OpenEnv Manifest | [openenv.yaml](openenv.yaml) |
 | 📜 License | [MIT](LICENSE) |
 

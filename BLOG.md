@@ -107,8 +107,8 @@ compliance review, and structured argumentation.
 ## Try It
 
 - **Live demo:** [HF Space](https://huggingface.co/spaces/tuhindev2029/VerdictEnv)
-- **Training notebook:** [Google Colab](https://colab.research.google.com/github/tuhindev2029/VerdictEnv/blob/main/VerdictEnv_Colab.ipynb)
-- **Code:** [GitHub / HF Hub](https://huggingface.co/spaces/tuhindev2029/VerdictEnv)
+- **Training notebook:** [Google Colab](https://colab.research.google.com/github/nextgendev2029/VerdictEnv/blob/main/VerdictEnv_Colab.ipynb)
+- **Code:** [GitHub](https://github.com/nextgendev2029/VerdictEnv) · [HF Hub](https://huggingface.co/spaces/tuhindev2029/VerdictEnv)
 
 ---
 
