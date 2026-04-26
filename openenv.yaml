@@ -47,14 +47,14 @@ grader:
   function: grade_medium
 
 scoring:
-  reward_range: [-1.0, 1.0]
+  reward_range: [-12.0, 9.0]
   success_threshold: 0.15
   score_formula: "cumulative reward over episode; higher is better case posture"
 
 agent:
   baseline: verdict_env.inference:main
   type: script
-  notes: "Random valid-action baseline; replace with a policy / LLM as you iterate."
+  notes: "Tabular Q-learning agent with epsilon-greedy exploration."
 
 constraints:
   max_runtime_seconds: 300

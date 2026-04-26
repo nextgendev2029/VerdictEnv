@@ -23,4 +23,7 @@ RUN pip install --no-cache-dir --no-deps .
 
 EXPOSE 7860
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:7860/api/health')"
+
 CMD ["python", "-m", "verdict_env.server.app"]
