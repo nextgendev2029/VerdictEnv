@@ -153,6 +153,14 @@ The Q-table reveals clear learned behavior — not random improvement:
 
 ## 🚀 Quick Start
 
+### Live on HF Space
+
+| | URL |
+|--|-----|
+| Gradio UI | https://tuhindev2029-verdictenv.hf.space/ |
+| API docs | https://tuhindev2029-verdictenv.hf.space/docs |
+| Health | https://tuhindev2029-verdictenv.hf.space/api/health |
+
 ### Run locally
 
 ```bash
@@ -240,6 +248,9 @@ The notebook covers:
 | Resource | Link |
 |----------|------|
 | 🚀 HF Space (live demo) | [tuhindev2029/VerdictEnv](https://huggingface.co/spaces/tuhindev2029/VerdictEnv) |
+| 🌐 Gradio UI (direct) | [tuhindev2029-verdictenv.hf.space](https://tuhindev2029-verdictenv.hf.space/) |
+| 📖 API Docs (Swagger) | [/docs](https://tuhindev2029-verdictenv.hf.space/docs) |
+| 💚 Health Check | [/api/health](https://tuhindev2029-verdictenv.hf.space/api/health) |
 | 📓 Colab Notebook | [VerdictEnv_Colab.ipynb](https://colab.research.google.com/github/nextgendev2029/VerdictEnv/blob/main/VerdictEnv_Colab.ipynb) |
 | 📝 Blog / Writeup | [BLOG.md](https://huggingface.co/spaces/tuhindev2029/VerdictEnv/blob/main/BLOG.md) |
 | ⚙️ OpenEnv Manifest | [openenv.yaml](openenv.yaml) |
