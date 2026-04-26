@@ -23,25 +23,38 @@ import gradio as gr
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from openenv.core.env_server.http_server import create_app
-
 from verdict_env.models import VerdictAction, VerdictObservation
 from verdict_env.server.environment import VerdictEnvironment
 from verdict_env.inference import LearnedAgent
 
 # ---------------------------------------------------------------------------
-# OpenEnv HTTP server — kept for `verdict-server` console-script only
+# OpenEnv HTTP server — kept for `verdict-server` console-script only.
+# Import is lazy so the Gradio UI starts cleanly even if openenv-core is
+# unavailable in the deployment environment (e.g. HF Spaces cold-build).
 # ---------------------------------------------------------------------------
 
-max_concurrent = int(os.getenv("MAX_CONCURRENT_ENVS", "8"))
+_openenv_app: Any = None
 
-openenv_app = create_app(
-    VerdictEnvironment,
-    VerdictAction,
-    VerdictObservation,
-    env_name="verdict_env",
-    max_concurrent_envs=max_concurrent,
-)
+
+def _get_openenv_app() -> Any:
+    global _openenv_app
+    if _openenv_app is not None:
+        return _openenv_app
+    try:
+        from openenv.core.env_server.http_server import create_app  # type: ignore
+        _openenv_app = create_app(
+            VerdictEnvironment,
+            VerdictAction,
+            VerdictObservation,
+            env_name="verdict_env",
+            max_concurrent_envs=int(os.getenv("MAX_CONCURRENT_ENVS", "8")),
+        )
+    except ImportError:
+        raise RuntimeError(
+            "openenv-core is not installed. "
+            "Run `pip install openenv-core[core]` to use the verdict-server console script."
+        )
+    return _openenv_app
 
 
 def serve_api() -> None:
@@ -50,7 +63,7 @@ def serve_api() -> None:
 
     port = int(os.getenv("PORT", "8000"))
     host = os.getenv("HOST", "0.0.0.0")
-    uvicorn.run(openenv_app, host=host, port=port, workers=int(os.getenv("WORKERS", "1")))
+    uvicorn.run(_get_openenv_app(), host=host, port=port, workers=int(os.getenv("WORKERS", "1")))
 
 
 # ---------------------------------------------------------------------------

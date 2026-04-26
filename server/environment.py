@@ -6,7 +6,32 @@ import uuid
 from copy import deepcopy
 from typing import Any, Optional
 
-from openenv.core.env_server import Environment
+try:
+    from openenv.core.env_server import Environment  # type: ignore
+except ImportError:
+    from abc import ABC, abstractmethod
+    from typing import Generic, TypeVar
+    _A = TypeVar("_A"); _O = TypeVar("_O"); _S = TypeVar("_S")
+
+    class Environment(ABC, Generic[_A, _O, _S]):  # type: ignore[no-redef]
+        """Inline fallback matching openenv-core's Environment interface."""
+        SUPPORTS_CONCURRENT_SESSIONS: bool = False
+
+        def __init__(self, transform=None, rubric=None):
+            self.transform = transform
+            self.rubric = rubric
+
+        @abstractmethod
+        def reset(self, seed=None, episode_id=None, **kwargs): ...
+
+        @abstractmethod
+        def step(self, action, timeout_s=None, **kwargs): ...
+
+        @property
+        @abstractmethod
+        def state(self): ...
+
+        def close(self) -> None: pass
 
 from verdict_env.models import VerdictAction, VerdictObservation, VerdictState
 from verdict_env.tasks import Task, get_task

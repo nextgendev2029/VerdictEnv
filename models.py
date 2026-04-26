@@ -1,9 +1,37 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
-from openenv.core.env_server.types import Action, Observation, State
-from pydantic import Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+# ---------------------------------------------------------------------------
+# OpenEnv base classes — use the real ones when openenv-core is installed,
+# otherwise fall back to faithful inline replicas so the app starts cleanly
+# on HF Spaces and fresh installs before openenv-core is available.
+# ---------------------------------------------------------------------------
+try:
+    from openenv.core.env_server.types import Action, Observation, State  # type: ignore
+except ImportError:
+    class Action(BaseModel):  # type: ignore[no-redef]
+        model_config = ConfigDict(
+            extra="forbid", validate_assignment=True, arbitrary_types_allowed=True
+        )
+        metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    class Observation(BaseModel):  # type: ignore[no-redef]
+        model_config = ConfigDict(
+            extra="forbid", validate_assignment=True, arbitrary_types_allowed=True
+        )
+        done: bool = Field(default=False)
+        reward: Optional[float] = Field(default=None)
+        metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    class State(BaseModel):  # type: ignore[no-redef]
+        model_config = ConfigDict(
+            extra="allow", validate_assignment=True, arbitrary_types_allowed=True
+        )
+        episode_id: Optional[str] = Field(default=None)
+        step_count: int = Field(default=0, ge=0)
 
 
 class VerdictAction(Action):
