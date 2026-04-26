@@ -16,60 +16,62 @@ license: mit
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenEnv](https://img.shields.io/badge/OpenEnv-compliant-green)](openenv.yaml)
 
-> **A turn-based courtroom trial environment for training AI agents to reason under uncertainty.**
-> The agent plays defense counsel — selecting evidence, raising objections, and managing jury sentiment
-> across structured trial phases to win the verdict.
+> **A turn-based courtroom trial environment where an AI agent learns to present evidence,
+> raise objections, and manage jury sentiment to win the verdict — purely through
+> reinforcement learning.**
 
 ---
 
 ## 🧠 Why This Matters
 
-LLMs struggle with **sequential decision-making under partial information** — exactly what a trial lawyer does every day.
-A defense attorney must:
+India has **5.58 crore (55.8M) pending court cases** — a backlog growing at 5.8% per year.
+Over 1.8 lakh cases have been stuck for **30+ years**. The system has 15 judges per million
+people; the US has 150. Justice is delayed at scale, and the bottleneck is human bandwidth.
 
-- **Read the room** — gauge jury sentiment and adapt strategy in real time
-- **Prioritize evidence** — not all evidence helps in all phases
-- **Time objections** — objecting at the wrong moment backfires
-- **Build a narrative** — across four distinct phases (opening → prosecution → defense → closing)
+Meanwhile, frontier LLMs fail at real legal reasoning. Yale/MIT's *CourtReasoner* benchmark
+(EMNLP 2025) found that **>60% of GPT-4/Claude outputs contain invalid legal arguments**
+when asked to construct full judicial analyses — not answer trivia, but *reason through cases*.
 
-This is not a game. It is a **structured test of causal reasoning, strategic sequencing, and contextual judgment** —
-capabilities that matter far beyond courtrooms (negotiation, medical diagnosis, policy planning).
+The gap is not knowledge. It is **sequential judgment under uncertainty**: reading the room,
+timing moves, building a case across phases. That is what trial lawyers do. That is what LLMs
+cannot do. That is what VerdictEnv trains.
 
 > While we demonstrate training using **tabular Q-learning**, the environment is designed for
 > **LLM-based policy learning using TRL / Unsloth**. The Q-learning baseline proves the reward
-> signal is learnable and the environment is non-trivial.
+> signal is learnable and the environment is genuinely non-trivial.
 
 ---
 
-## 🎮 Environment Design
+## 🎮 How the Environment Works
 
-### How it works
+A courtroom trial unfolds across **four phases**. Each phase has different strategic implications.
+The agent plays defense counsel.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     TRIAL PHASES                            │
-│  opening → prosecution_case → defense_case → closing → verdict │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        TRIAL PHASES                             │
+│  opening → prosecution_case → defense_case → closing → verdict  │
+└─────────────────────────────────────────────────────────────────┘
          ↓ each step ↓
-   Agent observes:          Agent chooses:
-   • jury_sentiment          • present_evidence[id]
-     (analytical/skeptical/  • object(hearsay|relevance
-      emotional)               |speculation)
-   • available_evidence      • pass
+   Agent observes:               Agent chooses:
+   • jury_sentiment               • present_evidence[id]
+     {analytical, skeptical,      • object(hearsay|relevance|speculation)
+      emotional}                  • pass
+   • available_evidence
    • current phase
    • case_score
          ↓
-   Reward = Δ case_score + phase bonus + procedure penalty
+   Reward = Δ case_score + verdict bonus + procedure reward + timing bonus
 ```
 
 ### Observation Space
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `jury_sentiment` | dict | `{analytical, skeptical, emotional}` floats ∈ [0,1] |
-| `available_evidence` | list | Each item has `id`, `strength` ∈ [0,1], `type` |
+| `jury_sentiment` | dict | `{analytical, skeptical, emotional}` — floats ∈ [0,1] |
+| `available_evidence` | list | Each item: `{id, strength ∈ [0,1], type}` |
 | `phase` | str | Current trial phase |
-| `case_score` | float | Scalar measure of defense case strength |
+| `case_score` | float | Running defense case strength |
 | `valid_actions` | list | Legal moves in this state |
 | `done` | bool | Episode terminal flag |
 
@@ -77,51 +79,65 @@ capabilities that matter far beyond courtrooms (negotiation, medical diagnosis, 
 
 | Action | When effective | Risk |
 |--------|---------------|------|
-| `present_evidence` | All phases | Low-strength evidence hurts |
+| `present_evidence` | Defense case, opening | Low-strength evidence hurts |
 | `object` | During prosecution | Wrong objection type = penalty |
-| `pass` | Any phase | Safe but gives up momentum |
+| `pass` | Any phase | Safe but surrenders momentum |
 
-### Reward Signal
+### Reward Design
 
-The reward is **multi-component** — not a single end-of-episode signal:
+**Multi-component, dense signal** — not a single 0/1 at episode end:
 
 ```
-reward = Δ analytical_sentiment × 2.0
-       + verdict_bonus (±5.0 at terminal)
-       + procedure_reward (correct objection type)
-       + timing_bonus (phase-appropriate action)
-       - penalty (invalid objection, weak evidence in wrong phase)
+reward = Δ analytical_sentiment × 2.0     (jury reacts to your move)
+       + verdict_bonus (±5.0 at terminal)  (win or lose the case)
+       + procedure_reward                  (correct objection type)
+       + timing_bonus                      (phase-appropriate action)
+       - penalty                           (bad objections, weak evidence)
 ```
 
-**Measured range across 200 training episodes:** `[-12.0, +9.0]`
+**Measured range:** `[-12.0, +9.0]` across 200 episodes.
+
+### Why This Environment is Hard
+
+The **greedy baseline performs worse than random**:
+
+| Agent | Mean Reward |
+|-------|-------------|
+| Random | -3.3 |
+| **Greedy** | **-13.8** |
+| Trained | **+8.0** |
+
+A greedy agent dumps all evidence early, ignores phase context, and never objects.
+The environment *punishes* brute-force strategies. If greedy beats trained, your env is
+trivial. In VerdictEnv, greedy doesn't even beat random.
 
 ### Task Difficulty
 
-| Task | Evidence items | Max steps | Description |
-|------|---------------|-----------|-------------|
-| `easy` | 3 | 12 | Tight record, strong evidence pool |
-| `medium` | 5 | 20 | Mixed docket, balanced difficulty |
-| `hard` | 8 | 32 | Weak evidence, skeptical jury |
+| Task | Evidence | Max steps | Description |
+|------|----------|-----------|-------------|
+| `easy` | 3 items | 12 | Strong evidence pool, lenient jury |
+| `medium` | 5 items | 20 | Balanced — recommended for training |
+| `hard` | 8 items | 32 | Weak evidence, skeptical jury |
 
 ---
 
 ## 📊 Training Results
 
-Trained using **tabular Q-learning with ε-greedy exploration** (ε: 0.30 → 0.04 over 200 episodes).
-Task: `medium` | Seed: 42 | Eval episodes: 40.
+**Algorithm:** Tabular Q-learning, ε-greedy (ε: 0.30 → 0.04 over 200 episodes)
+**Task:** `medium` | **Seed:** 42 | **Eval episodes:** 40
 
-### Results Table
+### Agent Comparison
 
 | Agent | Mean Reward | Win Rate | Case Score |
 |-------|-------------|----------|------------|
 | Random (baseline) | -3.315 | 60.0% | 0.1721 |
 | Greedy (baseline) | -13.765 | 60.0% | 0.1746 |
-| **Trained — Q-learning (during train)** | **+7.433** | **73.5%** | **0.1927** |
-| **Trained — Q-learning (eval, ε=0.05)** | **+7.998** | **72.5%** | **0.1915** |
+| **Trained (during training)** | **+7.433** | **73.5%** | **0.1927** |
+| **Trained (eval, ε=0.05)** | **+7.998** | **72.5%** | **0.1915** |
 
-**Improvement over random baseline → reward: +11.313 | win-rate: +12.5%**
+**Improvement over random → reward: +11.313 | win-rate: +12.5%**
 
-Verdict distribution (defense wins / total):
+### Verdict Distribution
 
 | Agent | Defense wins | Prosecution wins |
 |-------|-------------|-----------------|
@@ -130,22 +146,25 @@ Verdict distribution (defense wins / total):
 | Trained (train) | **147 / 200** | 53 / 200 |
 | Trained (eval) | **29 / 40** | 11 / 40 |
 
-### What the agent learned
+### What the Agent Learned
 
-The Q-table reveals clear learned behavior — not random improvement:
+The Q-table reveals an interpretable strategy — not noise:
 
-- `prosecution_case + object` → **+1.24 to +1.28** — agent learned to object during prosecution
-- `defense_case + presentmid` → **+0.99** — medium-strength evidence is most reliable
-- `defense_case + presentlo` → **-0.44 to -0.51** — agent learned to avoid weak evidence
-- `closing + object` → **-2.01** — objections in closing = penalty (correctly avoided)
+| State × Action | Q-value | What it means |
+|---------------|---------|--------------|
+| `prosecution` + `object` | **+1.28** | Disrupts the opponent — correctly timed |
+| `defense` + `present_mid` | **+0.99** | Medium-strength evidence is most reliable |
+| `defense` + `present_lo` | **-0.44** | Weak evidence hurts — learned to avoid |
+| `closing` + `object` | **-2.01** | Objections in closing = desperation penalty |
+| `opening` + `pass` | **+0.99** | Patience early — let prosecution overextend |
 
 ### Training Plots
 
-**Reward Curve** — trained agent consistently outperforms both baselines after ~50 episodes:
+**Reward Curve** — agent consistently outperforms both baselines after ~50 episodes:
 
 ![Reward Curve](assets/reward_curve.png)
 
-**Win Rate** — rolling win rate climbs from 60% (random) to ~73% (trained):
+**Win Rate** — rolling win rate climbs from 60% (random) to stable ~73%:
 
 ![Win Rate](assets/win_rate.png)
 
@@ -158,8 +177,8 @@ The Q-table reveals clear learned behavior — not random improvement:
 | | URL |
 |--|-----|
 | Gradio UI | https://tuhindev2029-verdictenv.hf.space/ |
-| API docs | https://tuhindev2029-verdictenv.hf.space/docs |
-| Health | https://tuhindev2029-verdictenv.hf.space/api/health |
+| API docs (Swagger) | https://tuhindev2029-verdictenv.hf.space/docs |
+| Health check | https://tuhindev2029-verdictenv.hf.space/api/health |
 
 ### Run locally
 
@@ -169,19 +188,18 @@ cd VerdictEnv
 pip install -e .
 ```
 
-**Train the agent (200 episodes, medium task):**
+**Train (200 episodes, medium task):**
 
 ```bash
 python -m verdict_env.inference --task medium --episodes 200
 ```
 
-**Launch the interactive UI + API server:**
+**Launch UI + API:**
 
 ```bash
 python -m verdict_env.server.app
 # Gradio UI  → http://localhost:7860/
 # API docs   → http://localhost:7860/docs
-# Health     → http://localhost:7860/api/health
 ```
 
 ### Docker
@@ -191,13 +209,13 @@ docker build -t verdictenv .
 docker run -p 7860:7860 verdictenv
 ```
 
-### API endpoints
+### API Endpoints
 
 | Method | Route | Description |
 |--------|-------|-------------|
 | `GET` | `/api/health` | Health check |
 | `POST` | `/api/reset` | Reset environment, get initial observation |
-| `POST` | `/api/step` | Take action, get next observation + reward |
+| `POST` | `/api/step` | Take action, get next state + reward |
 | `GET` | `/docs` | Interactive Swagger UI |
 
 ---
@@ -209,10 +227,10 @@ verdict_env/
 ├── models.py          # VerdictAction, VerdictObservation, VerdictState (Pydantic)
 ├── tasks.py           # Task configs (easy/medium/hard) + grading functions
 ├── inference.py       # Q-learning agent, training loop, baselines, plotting
-├── client.py          # WebSocket client (EnvClient protocol)
+├── client.py          # WebSocket client (EnvClient / OpenEnv protocol)
 └── server/
-    ├── environment.py # VerdictEnvironment — core game logic and reward
-    ├── app.py         # FastAPI (REST API) + Gradio UI, served together
+    ├── environment.py # VerdictEnvironment — core game logic, phases, reward
+    ├── app.py         # FastAPI REST API + Gradio UI (served together)
     └── requirements.txt
 ```
 
@@ -227,30 +245,29 @@ verdict_env/
 
 ## 📓 Training Notebook
 
-The full training pipeline runs end-to-end in Google Colab — no setup required:
+Full training pipeline — runs end-to-end in Google Colab, no setup required:
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nextgendev2029/VerdictEnv/blob/main/VerdictEnv_Colab.ipynb)
 
-The notebook covers:
+**Notebook covers:**
 1. Install and import
-2. Random + greedy baselines
-3. Q-learning training (200 episodes)
-4. Evaluation (ε = 0.05)
+2. Random + greedy baselines (40 episodes each)
+3. Q-learning training (200 episodes, ε-greedy)
+4. Evaluation at ε = 0.05
 5. Results table + verdict distribution
-6. Q-table inspection
-7. Single episode walkthrough (step-by-step)
+6. Q-table interpretation
+7. Single episode step-by-step walkthrough
 8. Inline reward curve + win rate plots
 
 ---
 
-## 🔗 Links
+## 🔗 All Links
 
 | Resource | Link |
 |----------|------|
-| 🚀 HF Space (live demo) | [tuhindev2029/VerdictEnv](https://huggingface.co/spaces/tuhindev2029/VerdictEnv) |
+| 🚀 HF Space | [tuhindev2029/VerdictEnv](https://huggingface.co/spaces/tuhindev2029/VerdictEnv) |
 | 🌐 Gradio UI (direct) | [tuhindev2029-verdictenv.hf.space](https://tuhindev2029-verdictenv.hf.space/) |
-| 📖 API Docs (Swagger) | [/docs](https://tuhindev2029-verdictenv.hf.space/docs) |
-| 💚 Health Check | [/api/health](https://tuhindev2029-verdictenv.hf.space/api/health) |
+| 📖 API Docs | [Swagger](https://tuhindev2029-verdictenv.hf.space/docs) |
 | 📓 Colab Notebook | [VerdictEnv_Colab.ipynb](https://colab.research.google.com/github/nextgendev2029/VerdictEnv/blob/main/VerdictEnv_Colab.ipynb) |
 | 📝 Blog / Writeup | [BLOG.md](https://huggingface.co/spaces/tuhindev2029/VerdictEnv/blob/main/BLOG.md) |
 | ⚙️ OpenEnv Manifest | [openenv.yaml](openenv.yaml) |
@@ -258,7 +275,7 @@ The notebook covers:
 
 ---
 
-## 🧪 OpenEnv Protocol
+## 🧪 OpenEnv Protocol Example
 
 ```python
 import asyncio
@@ -266,7 +283,7 @@ from verdict_env.client import VerdictEnv
 from verdict_env.models import VerdictAction
 
 async def main():
-    async with VerdictEnv("http://localhost:7860") as env:
+    async with VerdictEnv("https://tuhindev2029-verdictenv.hf.space") as env:
         r = await env.reset(task="medium", seed=42)
         obs = r.observation
         while not r.done:
@@ -292,4 +309,5 @@ asyncio.run(main())
 
 ---
 
-*Built for the OpenEnv Hackathon 2026 · MIT License*
+*Built for the OpenEnv Hackathon India 2026.*
+*5.58 crore cases are waiting. The system needs help. AI can learn to provide it.*
